@@ -401,13 +401,13 @@ C 0x044D fuera de juego
 C 0x0450 y su posicion a cero
 C 0x0454 el sonido
 C 0x0457 la ola sale de la casilla del cubo
-L 0x045E paso_de_ola               La ola avanza una casilla hacia donde mira Sparkie, hasta 10 o hasta un muro
+L 0x045E paso_de_ola               La ola avanza una casilla en sentido contrario al que mira Sparkie (del cubo hacia el), hasta 10 o hasta un muro
 C 0x045E los sentidos libres en la punta
 C 0x0461 hacia donde mira Sparkie
-C 0x0464 su bit en la tabla de 0x14D6
-C 0x046A se puede seguir?
+C 0x0464 el contrario, de la tabla de 0x14D6
+C 0x046A se puede seguir hacia ahi?
 C 0x046B no: la ola se acaba
-C 0x046D el dibujo de la ola, segun el sentido
+C 0x046D el dibujo de la ola, segun ese sentido
 C 0x0470 y la casilla siguiente
 C 0x0473 blanco sobre azul
 C 0x0478 apuntada en la lista de 0xE00F
@@ -451,7 +451,7 @@ C 0x0506 no: aqui se acaba
 C 0x0508 el dibujo del disparo, segun el sentido
 C 0x050E blanco
 C 0x0515 apuntado
-L 0x051F carga_de_sparkie          La carga de Sparkie: sin la entera se gasta un punto cada 215 cuadros impares, y a cero muere
+L 0x051F carga_de_sparkie          La carga de Sparkie: sin la entera se gasta un punto cada 87 cuadros impares (de 0x80 a 0xD7, el bit 7 es la marca del aviso), y a cero muere
 C 0x051F el estado de Sparkie
 C 0x0525 carga entera (3)?
 C 0x0528 si: solo el sprite
@@ -460,8 +460,8 @@ C 0x052C el aviso ya ha sonado?
 C 0x0530 en la demostracion no suena
 C 0x0536 marcado
 C 0x0539 el aviso de la carga baja
-C 0x0540 la cuenta llega a 0xD7?
-C 0x0545 se vuelve a empezar
+C 0x0540 la cuenta llega a 0xD7? (87 pasos desde 0x80)
+C 0x0545 se vuelve a empezar desde 0x80, con la marca
 C 0x054A la carga
 C 0x054D a cero: Sparkie se apaga
 C 0x054F un punto menos
@@ -571,12 +571,12 @@ C 0x06D2 el sentido elegido
 C 0x06DB al nibble alto de su estado
 C 0x06E4 un paso
 C 0x06E7 y su sprite
-L 0x06EA siguiente_enemigo         El siguiente de la tanda (la tanda 8 solo tiene uno)
+L 0x06EA siguiente_enemigo         El siguiente de la tanda; la tanda 8 tiene uno solo, y con la vida entera pinta la casilla que pisa
 C 0x06EA la tanda 8?
 C 0x06F2 vivo?
-C 0x06F7 con la vida entera no pinta
+C 0x06F7 con la vida a medias no pinta
 C 0x06FC la casilla de debajo...
-C 0x06FF ...queda pintada (1): el enemigo tambien pinta
+C 0x06FF ...queda pintada (1): el de la tanda 8 pinta el suelo como Sparkie
 C 0x0704 el siguiente hueco
 C 0x070C el cuarto ya?
 C 0x0711 su numero, al nibble alto de 0xE006
@@ -786,7 +786,7 @@ C 0x09CD y en su franja
 # ======================================================================
 # LOS LABERINTOS: de la ROM a la RAM
 # ======================================================================
-B 0x09D0 EL LABERINTO DE LA ROM (HL) A LA RAM. Los 72 primeros bytes son el mapa a un bit por casilla (24 filas de 3 bytes): cada bit sale doble, 00 pasillo o 11 muro. Detras: los tres cubos, las cinco llamas, los nueve enemigos, la casilla del premio, y los bloques por grupos separados por un cero (dos ceros acaban). Los cuatro primeros grupos son las listas de bloques que arden. Los cubos tapan cuatro casillas de muro, que se abren al cogerlos (0x0444).
+B 0x09D0 EL LABERINTO DE LA ROM (HL) A LA RAM. Los 72 primeros bytes son el mapa a un bit por casilla (24 filas de 3 bytes): cada bit sale doble, 00 pasillo o 11 muro. Detras: los tres cubos, las cinco llamas, los nueve enemigos, la casilla del premio, y los bloques por grupos separados por un cero (dos ceros acaban). Los grupos se copian a las cuatro listas de bloques que arden, diez bytes como mucho cada una: un grupo de mas de cinco bloques se parte (la cruz del laberinto 4: 5 y 4). Los cubos tapan cuatro casillas de muro, que se abren al cogerlos (0x0444).
 L 0x09D0 desempaqueta_laberinto    El laberinto de HL a 0xE12C, con sus objetos y sus bloques
 C 0x09D0 el mapa de la RAM...
 C 0x09D5 ...244 bytes...
@@ -1613,3 +1613,4 @@ L 0x0736 sprite_fuera_a            Lo mismo con el tipo en A (0x10 Sparkie)
 L 0x079E bits_a_3                  Z si los bits 0-1 de A estan a 3
 L 0x17F9 cuarto_de_iy              HL = 0xE0D4 + 2 * (IY)
 L 0x091A pinta_un_cubo             Un cubo (IX) con su color
+B 0x1846 FALLO: con 10.000 centenas o mas (1.000.000 de puntos) la primera conversion da una quinta cifra, y la segunda (0x185A) convierte HL = 0xE249, que es una direccion y no la puntuacion: el marcador pinta siempre 7929 (medido ejecutando esta rutina con 10.000, 10.050 y 12.345).

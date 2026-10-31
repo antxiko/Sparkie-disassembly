@@ -98,3 +98,34 @@ clean:
 	rm -rf $(WORK)/$(JUEGO).trace.json $(WORK)/$(JUEGO).blocks
 
 .PHONY: all comprueba trace listado verify sanity test densidad clean
+
+# ---------------------------------------------------------------------------
+# Lo jugado y la web
+# ---------------------------------------------------------------------------
+# Las grabaciones de openMSX (work/*.bin) se hacen con
+#   powershell -File tools/lanza_graba.ps1 -guion tools/guiones/X.tcl -salida work/X.bin -bp2 0x11CC
+# Necesitan PIL, numpy y lameenc: el python de Programs.
+PYIMG ?= /c/Users/Antxiko/AppData/Local/Programs/Python/Python313/python.exe
+imagenes: $(ROM)
+	$(PYIMG) tools/laberintos.py docs/imagenes work/fases.bin 47 785 1286 1785
+	$(PYIMG) tools/personajes.py docs/imagenes/personajes.gif work/atraccion.bin 60
+	$(PYIMG) tools/pantallas.py docs/imagenes work/atraccion.bin 10 60
+	$(PYIMG) tools/objetos.py docs/imagenes/objetos.gif
+	$(PYIMG) tools/gifs.py docs/imagenes
+
+musica: $(ROM)
+	$(PYIMG) tools/musica.py todas docs/audio
+
+# La web: en el repositorio solo van las paginas en markdown; GitHub Pages las
+# convierte con Jekyll (tools/jekyll.py escribe su configuracion y plantillas).
+# La portada la monta make_web.py con lo de tools/contenido_web.py.
+JEKYLL ?= C:/msys64/mingw64/bin/ruby C:/msys64/mingw64/bin/jekyll
+web:
+	python3 tools/jekyll.py docs
+	python3 tools/make_web.py docs/imagenes docs/index.html en
+	python3 tools/make_web.py docs/imagenes docs/es/index.html es
+	rm -rf $(WORK)/_site
+	$(JEKYLL) build -s docs -d $(WORK)/_site
+	python3 tools/check_enlaces.py $(WORK)/_site
+
+.PHONY: imagenes musica web

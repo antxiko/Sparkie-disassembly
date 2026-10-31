@@ -719,14 +719,14 @@ boton:		; El boton: el cubo de delante o los disparos
 	call zumbido		;0454   ; el sonido
 	ld ix,0e039h		;0457   ; la ola sale de la casilla del cubo
 	call pon_posicion		;045b
-paso_de_ola:		; La ola avanza una casilla hacia donde mira Sparkie, hasta 10 o hasta un muro
+paso_de_ola:		; La ola avanza una casilla en sentido contrario al que mira Sparkie (del cubo hacia el), hasta 10 o hasta un muro
 	call libres_en_casilla		;045e   ; los sentidos libres en la punta
 	ld a,(0e004h)		;0461   ; hacia donde mira Sparkie
-	call bit_de_sentido		;0464   ; su bit en la tabla de 0x14D6
+	call bit_de_sentido		;0464   ; el contrario, de la tabla de 0x14D6
 	ld a,(0e007h)		;0467   ; lo libre en la punta
-	and (hl)			;046a   ; se puede seguir?
+	and (hl)			;046a   ; se puede seguir hacia ahi?
 	jr z,acaba_ola		;046b   ; no: la ola se acaba
-	ld hl,01efbh		;046d   ; el dibujo de la ola, segun el sentido
+	ld hl,01efbh		;046d   ; el dibujo de la ola, segun ese sentido
 	call dibujo_y_casilla		;0470   ; y la casilla siguiente
 	ld a,0f5h		;0473   ; blanco sobre azul
 	call pinta_objeto		;0475
@@ -836,7 +836,7 @@ L_051C:
 	pop hl			;051c
 	pop bc			;051d
 	ret			;051e
-carga_de_sparkie:		; La carga de Sparkie: sin la entera se gasta un punto cada 215 cuadros impares, y a cero muere
+carga_de_sparkie:		; La carga de Sparkie: sin la entera se gasta un punto cada 87 cuadros impares (de 0x80 a 0xD7, el bit 7 es la marca del aviso), y a cero muere
 	ld hl,0e004h		;051f   ; el estado de Sparkie
 	push hl			;0522
 	pop ix		;0523
@@ -854,10 +854,10 @@ carga_de_sparkie:		; La carga de Sparkie: sin la entera se gasta un punto cada 2
 	call musica_de_aviso		;053c
 	pop hl			;053f
 L_0540:
-	ld a,(hl)			;0540   ; la cuenta llega a 0xD7?
+	ld a,(hl)			;0540   ; la cuenta llega a 0xD7? (87 pasos desde 0x80)
 	cp 0d7h		;0541
 	jr nz,L_0553		;0543
-	ld a,080h		;0545   ; se vuelve a empezar
+	ld a,080h		;0545   ; se vuelve a empezar desde 0x80, con la marca
 	and (hl)			;0547
 	ld (hl),a			;0548
 	dec hl			;0549
@@ -1100,18 +1100,18 @@ L_06CA:
 	ld (ix+020h),a		;06e1
 	call da_paso		;06e4   ; un paso
 	call sprite_enemigo		;06e7   ; y su sprite
-siguiente_enemigo:		; El siguiente de la tanda (la tanda 8 solo tiene uno)
+siguiente_enemigo:		; El siguiente de la tanda; la tanda 8 tiene uno solo, y con la vida entera pinta la casilla que pisa
 	ld a,(0e006h)		;06ea   ; la tanda 8?
 	bit 3,a		;06ed
 	jr z,L_0704		;06ef
 	pop af			;06f1
 	bit 3,(ix+020h)		;06f2   ; vivo?
 	ret z			;06f6
-	call vida_entera		;06f7   ; con la vida entera no pinta
+	call vida_entera		;06f7   ; con la vida a medias no pinta
 	ret c			;06fa
 	rst 30h			;06fb
 	call casilla_de_debajo		;06fc   ; la casilla de debajo...
-	ld a,001h		;06ff   ; ...queda pintada (1): el enemigo tambien pinta
+	ld a,001h		;06ff   ; ...queda pintada (1): el de la tanda 8 pinta el suelo como Sparkie
 	jp pinta_bloque		;0701
 L_0704:
 	inc ix		;0704   ; el siguiente hueco
@@ -1602,7 +1602,7 @@ L_09B1:
 	jp entra_en_franja		;09cd   ; y en su franja
 
 ; ----------------------------------------------------------------------
-; EL LABERINTO DE LA ROM (HL) A LA RAM. Los 72 primeros bytes son el mapa a un bit por casilla (24 filas de 3 bytes): cada bit sale doble, 00 pasillo o 11 muro. Detras: los tres cubos, las cinco llamas, los nueve enemigos, la casilla del premio, y los bloques por grupos separados por un cero (dos ceros acaban). Los cuatro primeros grupos son las listas de bloques que arden.
+; EL LABERINTO DE LA ROM (HL) A LA RAM. Los 72 primeros bytes son el mapa a un bit por casilla (24 filas de 3 bytes): cada bit sale doble, 00 pasillo o 11 muro. Detras: los tres cubos, las cinco llamas, los nueve enemigos, la casilla del premio, y los bloques por grupos separados por un cero (dos ceros acaban). Los grupos se copian a las cuatro listas de bloques que arden, diez bytes como mucho cada una: un grupo de mas de cinco bloques se parte (la cruz del laberinto 4: 5 y 4). Los cubos tapan cuatro casillas de muro, que se abren al cogerlos (0x0444).
 ; ----------------------------------------------------------------------
 desempaqueta_laberinto:		; El laberinto de HL a 0xE12C, con sus objetos y sus bloques
 	push hl			;09d0   ; el mapa de la RAM...
@@ -3656,6 +3656,10 @@ L_1841:
 	ex de,hl			;1842
 	rld		;1843   ; la cifra entra en el tampon
 	ret			;1845
+
+; ----------------------------------------------------------------------
+; FALLO: con 10.000 centenas o mas (1.000.000 de puntos) la primera conversion da una quinta cifra, y la segunda (0x185A) convierte HL = 0xE249, que es una direccion y no la puntuacion: el marcador pinta siempre 7929 (medido ejecutando esta rutina con 10.000, 10.050 y 12.345).
+; ----------------------------------------------------------------------
 pinta_cifras:		; HL en decimal, cuatro cifras desde (E, D), en blanco
 	call a_decimal		;1846   ; a decimal
 	sub a			;1849

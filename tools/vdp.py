@@ -15,8 +15,9 @@ supuestos:
 Con la pantalla apagada (R1 bit 6 a cero) sale el color de fondo entero.
 
 Uso (modulo):  for c in cuadros("work/x.bin"): im = imagen(c["vram"], c["regs"])
-Uso (orden):   vdp.py <grabacion.bin> <salida.gif|.png> [--desde N] [--hasta N] [--cada K] [--ms MS]
+Uso (orden):   vdp.py <grabacion.bin> <salida.gif|.png> [--desde N] [--hasta N] [--cada K] [--escala E]
 """
+import struct
 import sys
 
 PALETA = [
@@ -30,7 +31,8 @@ RAM_N = 0x800          # lo que graba omsx_graba.tcl por defecto (GRABA_RAM)
 
 
 def cuadros(ruta, ram_n=RAM_N):
-    """Por cada cuadro: dict(regs, ram, vram) con la VRAM entera de ese cuadro."""
+    """Por cada cuadro: dict(regs, ram, psg, t, vram): t es el tiempo emulado y
+    la VRAM es la entera de ese cuadro."""
     d = open(ruta, "rb").read()
     vram = bytearray(0x4000)
     i = 0
@@ -41,13 +43,17 @@ def cuadros(ruta, ram_n=RAM_N):
         i += 8
         ram = d[i:i + ram_n]
         i += ram_n
+        psg = d[i:i + 16]
+        i += 16
+        t, = struct.unpack("<d", d[i:i + 8])
+        i += 8
         k = d[i]
         i += 1
         for _ in range(k):
             n = d[i]
             vram[n * 1024:(n + 1) * 1024] = d[i + 1:i + 1025]
             i += 1025
-        yield {"regs": bytes(regs), "ram": ram, "vram": bytes(vram)}
+        yield {"regs": bytes(regs), "ram": ram, "psg": psg, "t": t, "vram": bytes(vram)}
 
 
 def modo(regs):
@@ -211,30 +217,41 @@ class Gif:
                           duration=out, loop=0, optimize=False, disposal=1)
 
 
+def gif(ruta, salida, desde=0, hasta=10 ** 9, cada=2, escala=1, recorte=None, tope_ms=None):
+    """El GIF de los cuadros [desde, hasta] de una grabacion, uno de cada
+    `cada`, cada imagen con el tiempo EMULADO que dura (lo apunta la grabacion:
+    los tramos con las interrupciones cortadas duran lo que duraron)."""
+    g = Gif()
+    cs = list(cuadros(ruta))
+    hasta = min(hasta, len(cs) - 2)
+    for n in range(desde, hasta + 1, cada):
+        sig = min(n + cada, len(cs) - 1)
+        ms = (cs[sig]["t"] - cs[n]["t"]) * 1000.0
+        im = imagen(cs[n]["vram"], cs[n]["regs"], escala)
+        if recorte:
+            im = im.crop(tuple(v * escala for v in recorte))
+        g.pon(im, ms / g.ms)
+    g.guarda(salida, tope_ms)
+    return len(g), (cs[hasta]["t"] - cs[desde]["t"])
+
+
 def main():
     a = sys.argv[1:]
     ruta, salida = a[0], a[1]
-    op = {"--desde": 0, "--hasta": 10 ** 9, "--cada": 1, "--ms": 1000.0 / 60}
+    op = {"--desde": 0, "--hasta": 10 ** 9, "--cada": 2, "--escala": 1}
     i = 2
     while i < len(a):
-        op[a[i]] = float(a[i + 1]) if a[i] == "--ms" else int(a[i + 1])
+        op[a[i]] = int(a[i + 1])
         i += 2
     if salida.endswith(".png"):
         for n, c in enumerate(cuadros(ruta)):
             if n == op["--desde"]:
-                imagen(c["vram"], c["regs"]).save(salida)
+                imagen(c["vram"], c["regs"], op["--escala"]).save(salida)
                 print(salida, "modo", modo(c["regs"]), "regs", c["regs"].hex())
                 return
         return
-    g = Gif(op["--ms"] * op["--cada"])
-    for n, c in enumerate(cuadros(ruta)):
-        if n < op["--desde"] or (n - op["--desde"]) % op["--cada"]:
-            continue
-        if n > op["--hasta"]:
-            break
-        g.pon(imagen(c["vram"], c["regs"]))
-    g.guarda(salida)
-    print(salida, len(g), "imagenes")
+    n, s = gif(ruta, salida, op["--desde"], op["--hasta"], op["--cada"], op["--escala"])
+    print("%s: %d imagenes, %.1f s" % (salida, n, s))
 
 
 if __name__ == "__main__":
