@@ -1,0 +1,12 @@
+# Puntos de entrada que el trazado NO puede deducir solo.
+#
+# Cada uno lleva escrito POR QUE hace falta. Una entrada sin justificar es una
+# direccion metida a mano para que la cobertura cuadre.
+
+# El arranque: la cabecera del cartucho da INIT en 0x00CF, y la BIOS lo llama
+# con CALSLT, que pone ESTE cartucho en la pagina 0.
+0x00CF   # INIT
+
+# Con el cartucho en la pagina 0, el `im 1` de INIT manda la interrupcion del
+# VDP a 0x0038, que es de este programa y no de la BIOS.
+0x0038   # la interrupcion
