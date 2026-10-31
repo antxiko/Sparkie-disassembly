@@ -110,3 +110,15 @@ bloque y `0xFE` pasa a la frase siguiente de la música, que se copia a
 | los patrones de los sprites | 0 de 2.048 |
 | la pantalla de Sony y el menú | 0 de 16.384, registros iguales |
 | la música de la fase y el aviso | 167 y 233 cuadros seguidos iguales |
+
+## Código compartido con otros cartuchos de Konami
+
+Este desensamblado se ha comparado, instrucción por instrucción, con
+todos los demás de Konami de la serie (al menos seis instrucciones
+desde una etiqueta hasta su `ret` o su salto sin condición, sin mirar
+las direcciones). De los otros 62, **ninguno** comparte un solo
+bloque con este.
+
+La matriz entera, los 63 cartuchos entre sí, está en
+[Las rutinas](https://antxiko.github.io/MSX-disassembly-database/es/LAS-RUTINAS.html) de la base de datos de la
+serie, con el método y el programa que la mide.

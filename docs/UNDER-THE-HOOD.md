@@ -106,3 +106,14 @@ and the volume if it follows; with bit 4 of the volume, the envelope period.
 | the sprite patterns | 0 of 2,048 |
 | the Sony screen and the menu | 0 of 16,384, registers equal |
 | the stage tune and the warning | 167 and 233 frames in a row equal |
+
+## Code shared with other Konami cartridges
+
+This disassembly has been compared, instruction by instruction, with
+every other Konami one in the series (at least six instructions from
+a label to its `ret` or its unconditional jump, addresses aside). Of
+the other 62, **none** shares a single block with this one.
+
+The whole matrix, the 63 cartridges against each other, is on
+[The routines](https://antxiko.github.io/MSX-disassembly-database/THE-ROUTINES.html) in the series database, along
+with the method and the program that measures it.
